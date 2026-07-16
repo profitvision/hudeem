@@ -1,0 +1,847 @@
+# ============================================================
+# Весь проект в одном тексте
+# ============================================================
+
+# Корневые файлы (в папке weight-tracker)
+
+--- .gitignore ---
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.aab
+
+--- build.gradle (project) ---
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+plugins {
+id 'com.android.application' version '8.2.0' apply false
+id 'org.jetbrains.kotlin.android' version '1.9.20' apply false
+}
+
+--- settings.gradle ---
+pluginManagement {
+repositories {
+google()
+mavenCentral()
+gradlePluginPortal()
+}
+}
+dependencyResolutionManagement {
+repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+repositories {
+google()
+mavenCentral()
+maven { url 'https://jitpack.io' }
+}
+}
+rootProject.name = "WeightTracker"
+include ':app'
+
+--- gradle.properties ---
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.enableJetifier=true
+kotlin.code.style=official
+android.nonTransitiveRClass=true
+
+--- README.md ---
+# Weight Tracker - приложение для похудения
+
+Приложение для отслеживания веса с графиком прогресса.
+Цель: 66-68 кг. Хранит данные локально (Room).
+
+## Стек
+- Kotlin, Room, LiveData, ViewModel, MPAndroidChart
+
+## Как запустить
+1. Открыть в Android Studio
+2. Синхронизировать Gradle
+3. Запустить на эмуляторе
+
+---
+
+# Папка app/
+
+--- app/build.gradle ---
+plugins {
+id 'com.android.application'
+id 'org.jetbrains.kotlin.android'
+id 'kotlin-kapt'
+}
+
+android {
+namespace 'com.example.weighttracker'
+compileSdk 34
+
+defaultConfig {
+applicationId "com.example.weighttracker"
+minSdk 24
+targetSdk 34
+versionCode 1
+versionName "1.0"
+}
+
+buildTypes {
+release {
+minifyEnabled false
+proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+}
+}
+compileOptions {
+sourceCompatibility JavaVersion.VERSION_17
+targetCompatibility JavaVersion.VERSION_17
+}
+kotlinOptions {
+jvmTarget = '17'
+}
+buildFeatures {
+viewBinding true
+}
+}
+
+dependencies {
+implementation 'androidx.core:core-ktx:1.12.0'
+implementation 'androidx.appcompat:appcompat:1.6.1'
+implementation 'com.google.android.material:material:1.11.0'
+implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+implementation 'androidx.room:room-runtime:2.6.1'
+kapt 'androidx.room:room-compiler:2.6.1'
+implementation 'androidx.room:room-ktx:2.6.1'
+
+implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0'
+implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.7.0'
+
+implementation 'androidx.navigation:navigation-fragment-ktx:2.7.6'
+implementation 'androidx.navigation:navigation-ui-ktx:2.7.6'
+
+implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+}
+
+--- app/src/main/AndroidManifest.xml ---
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.weighttracker">
+
+    <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="@string/app_name"
+        android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
+        <activity android:name=".ui.MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+
+--- app/src/main/res/values/colors.xml ---
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
+
+--- app/src/main/res/values/strings.xml ---
+<resources>
+    <string name="app_name">Weight Tracker</string>
+</resources>
+
+--- app/src/main/res/values/themes.xml ---
+<resources>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <item name="colorPrimary">@color/purple_500</item><item name="colorPrimaryDark">@color/purple_700</item><item name="colorAccent">@color/teal_200</item>
+    </style>
+</resources>
+
+--- app/src/main/res/layout/activity_main.xml ---
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <fragment android:id="@+id/nav_host_fragment" android:name="androidx.navigation.fragment.NavHostFragment"
+        android:layout_width="0dp" android:layout_height="0dp" app:defaultNavHost="true"
+        app:navGraph="@navigation/nav_graph" app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+--- app/src/main/res/layout/fragment_list.xml ---
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView android:id="@+id/tvTarget" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="Цель: 67 кг" android:textSize="20sp" android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toTopOf="parent"
+        android:layout_margin="16dp" />
+
+    <TextView android:id="@+id/tvProgress" android:layout_width="0dp" android:layout_height="wrap_content"
+        android:padding="8dp" android:background="@android:drawable/editbox_background" android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvTarget" android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp" android:layout_marginTop="8dp" android:text="Нет записей" />
+
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/recyclerView" android:layout_width="0dp"
+        android:layout_height="0dp" app:layout_constraintTop_toBottomOf="@id/tvProgress"
+        app:layout_constraintBottom_toTopOf="@id/btnChart" app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" android:layout_margin="8dp" />
+
+    <Button android:id="@+id/btnChart" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="График" app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" android:layout_margin="16dp" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton android:id="@+id/fabAdd"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:src="@android:drawable/ic_input_add" app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" android:layout_margin="16dp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+--- app/src/main/res/layout/fragment_add_edit.xml ---
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:orientation="vertical" android:padding="16dp">
+
+    <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:hint="Дата (yyyy-MM-dd)">
+
+        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etDate"
+            android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="date" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:hint="Вес (кг)">
+
+        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etWeight"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:inputType="numberDecimal" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:hint="Что съели?">
+
+        <com.google.android.material.textfield.TextInputEditText android:id="@+id/etFood"
+            android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textMultiLine"
+            android:maxLines="5" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:layout_marginTop="16dp">
+
+        <Button android:id="@+id/btnSave" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:text="Сохранить" android:layout_weight="1" />
+
+        <Button android:id="@+id/btnDelete" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:text="Удалить" android:layout_weight="1" android:visibility="gone" />
+    </LinearLayout>
+
+</LinearLayout>
+
+--- app/src/main/res/layout/fragment_chart.xml ---
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:orientation="vertical" android:padding="16dp">
+
+    <com.github.mikephil.charting.charts.LineChart android:id="@+id/chart" android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+</LinearLayout>
+
+--- app/src/main/res/layout/item_entry.xml ---
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent"
+    android:layout_height="wrap_content" android:layout_margin="4dp" app:cardCornerRadius="8dp" app:cardElevation="4dp">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="12dp">
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView android:id="@+id/tvDate" android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:textSize="16sp" android:textStyle="bold" />
+
+            <TextView android:id="@+id/tvWeight" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:textSize="16sp" />
+
+            <TextView android:id="@+id/tvDiff" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="8dp" android:textSize="14sp" />
+        </LinearLayout>
+
+        <TextView android:id="@+id/tvFood" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textSize="14sp" android:textColor="@android:color/darker_gray" android:layout_marginTop="4dp" />
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>
+
+--- app/src/main/res/navigation/nav_graph.xml ---
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/nav_graph"
+    app:startDestination="@id/listFragment">
+
+    <fragment android:id="@+id/listFragment" android:name="com.example.weighttracker.ui.list.ListFragment"
+        android:label="Мой прогресс">
+        <action android:id="@+id/action_list_to_add" app:destination="@id/addEditFragment" />
+        <action android:id="@+id/action_list_to_chart" app:destination="@id/chartFragment" />
+    </fragment>
+
+    <fragment android:id="@+id/addEditFragment" android:name="com.example.weighttracker.ui.add.AddEditFragment"
+        android:label="Добавить / Редактировать">
+        <argument android:name="entryId" app:argType="long" android:defaultValue="-1L" />
+    </fragment>
+
+    <fragment android:id="@+id/chartFragment" android:name="com.example.weighttracker.ui.chart.ChartFragment"
+        android:label="График" />
+</navigation>
+
+--- app/src/main/java/com/example/weighttracker/data/WeightEntry.kt ---
+package com.example.weighttracker.data
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "weight_entries")
+data class WeightEntry(
+@PrimaryKey(autoGenerate = true)
+val id: Long = 0,
+val date: String,
+val weight: Double,
+val food: String,
+val timestamp: Long = System.currentTimeMillis()
+)
+
+--- app/src/main/java/com/example/weighttracker/data/WeightDao.kt ---
+package com.example.weighttracker.data
+
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.Query
+import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface WeightDao {
+@Insert
+suspend fun insert(entry: WeightEntry)
+
+@Update
+suspend fun update(entry: WeightEntry)
+
+@Delete
+suspend fun delete(entry: WeightEntry)
+
+@Query("SELECT * FROM weight_entries ORDER BY date DESC, timestamp DESC")
+fun getAllEntries(): Flow<List<WeightEntry>>
+
+    @Query("SELECT * FROM weight_entries ORDER BY date ASC")
+    fun getAllEntriesAsc(): Flow<List<WeightEntry>>
+        }
+
+        --- app/src/main/java/com/example/weighttracker/data/WeightDatabase.kt ---
+        package com.example.weighttracker.data
+
+        import android.content.Context
+        import androidx.room.Database
+        import androidx.room.Room
+        import androidx.room.RoomDatabase
+
+        @Database(entities = [WeightEntry::class], version = 1, exportSchema = false)
+        abstract class WeightDatabase : RoomDatabase() {
+        abstract fun weightDao(): WeightDao
+
+        companion object {
+        @Volatile
+        private var INSTANCE: WeightDatabase? = null
+
+        fun getDatabase(context: Context): WeightDatabase {
+        return INSTANCE ?: synchronized(this) {
+        val instance = Room.databaseBuilder(
+        context.applicationContext,
+        WeightDatabase::class.java,
+        "weight_db"
+        ).build()
+        INSTANCE = instance
+        instance
+        }
+        }
+        }
+        }
+
+        --- app/src/main/java/com/example/weighttracker/repository/WeightRepository.kt ---
+        package com.example.weighttracker.repository
+
+        import com.example.weighttracker.data.WeightDao
+        import com.example.weighttracker.data.WeightEntry
+        import kotlinx.coroutines.flow.Flow
+
+        class WeightRepository(private val weightDao: WeightDao) {
+        fun getAllEntries(): Flow<List<WeightEntry>> = weightDao.getAllEntries()
+            fun getAllEntriesAsc(): Flow<List<WeightEntry>> = weightDao.getAllEntriesAsc()
+                suspend fun insert(entry: WeightEntry) = weightDao.insert(entry)
+                suspend fun update(entry: WeightEntry) = weightDao.update(entry)
+                suspend fun delete(entry: WeightEntry) = weightDao.delete(entry)
+                }
+
+                --- app/src/main/java/com/example/weighttracker/viewmodel/WeightViewModel.kt ---
+                package com.example.weighttracker.viewmodel
+
+                import android.app.Application
+                import androidx.lifecycle.AndroidViewModel
+                import androidx.lifecycle.LiveData
+                import androidx.lifecycle.MutableLiveData
+                import androidx.lifecycle.viewModelScope
+                import com.example.weighttracker.data.WeightDatabase
+                import com.example.weighttracker.data.WeightEntry
+                import com.example.weighttracker.repository.WeightRepository
+                import kotlinx.coroutines.flow.first
+                import kotlinx.coroutines.launch
+
+                class WeightViewModel(application: Application) : AndroidViewModel(application) {
+
+                private val repository = WeightRepository(
+                WeightDatabase.getDatabase(application).weightDao()
+                )
+
+                val allEntries = repository.getAllEntries()
+                val allEntriesAsc = repository.getAllEntriesAsc()
+
+                private val _targetWeight = MutableLiveData(67.0)
+                val targetWeight: LiveData<Double> = _targetWeight
+
+                    fun setTargetWeight(weight: Double) {
+                    _targetWeight.value = weight
+                    }
+
+                    fun insert(entry: WeightEntry) = viewModelScope.launch {
+                    repository.insert(entry)
+                    }
+
+                    fun update(entry: WeightEntry) = viewModelScope.launch {
+                    repository.update(entry)
+                    }
+
+                    fun delete(entry: WeightEntry) = viewModelScope.launch {
+                    repository.delete(entry)
+                    }
+
+                    data class ProgressData(
+                    val totalLost: Double,
+                    val dailyChange: Double,
+                    val currentWeight: Double,
+                    val startWeight: Double,
+                    val daysCount: Int
+                    )
+
+                    suspend fun calculateProgress(): ProgressData? {
+                    val entries = allEntriesAsc.first()
+                    if (entries.isEmpty()) return null
+                    val sorted = entries.sortedBy { it.date }
+                    val first = sorted.first()
+                    val last = sorted.last()
+                    val totalLost = first.weight - last.weight
+                    val dailyChange = if (sorted.size > 1) {
+                    last.weight - sorted[sorted.size - 2].weight
+                    } else 0.0
+                    return ProgressData(
+                    totalLost = totalLost,
+                    dailyChange = dailyChange,
+                    currentWeight = last.weight,
+                    startWeight = first.weight,
+                    daysCount = sorted.size
+                    )
+                    }
+                    }
+
+                    --- app/src/main/java/com/example/weighttracker/ui/MainActivity.kt ---
+                    package com.example.weighttracker.ui
+
+                    import android.os.Bundle
+                    import androidx.appcompat.app.AppCompatActivity
+                    import androidx.navigation.findNavController
+                    import androidx.navigation.ui.AppBarConfiguration
+                    import androidx.navigation.ui.setupActionBarWithNavController
+                    import com.example.weighttracker.R
+
+                    class MainActivity : AppCompatActivity() {
+                    override fun onCreate(savedInstanceState: Bundle?) {
+                    super.onCreate(savedInstanceState)
+                    setContentView(R.layout.activity_main)
+
+                    val navController = findNavController(R.id.nav_host_fragment)
+                    val appBarConfiguration = AppBarConfiguration(navController.graph)
+                    setupActionBarWithNavController(navController, appBarConfiguration)
+                    }
+
+                    override fun onSupportNavigateUp(): Boolean {
+                    val navController = findNavController(R.id.nav_host_fragment)
+                    return navController.navigateUp() || super.onSupportNavigateUp()
+                    }
+                    }
+
+                    --- app/src/main/java/com/example/weighttracker/ui/list/ListFragment.kt ---
+                    package com.example.weighttracker.ui.list
+
+                    import android.os.Bundle
+                    import android.view.LayoutInflater
+                    import android.view.View
+                    import android.view.ViewGroup
+                    import androidx.fragment.app.Fragment
+                    import androidx.fragment.app.viewModels
+                    import androidx.lifecycle.lifecycleScope
+                    import androidx.navigation.fragment.findNavController
+                    import androidx.recyclerview.widget.LinearLayoutManager
+                    import com.example.weighttracker.R
+                    import com.example.weighttracker.databinding.FragmentListBinding
+                    import com.example.weighttracker.viewmodel.WeightViewModel
+                    import kotlinx.coroutines.launch
+
+                    class ListFragment : Fragment() {
+
+                    private var _binding: FragmentListBinding? = null
+                    private val binding get() = _binding!!
+
+                    private val viewModel: WeightViewModel by viewModels()
+                    private lateinit var adapter: EntriesAdapter
+
+                    override fun onCreateView(
+                    inflater: LayoutInflater, container: ViewGroup?,
+                    savedInstanceState: Bundle?
+                    ): View {
+                    _binding = FragmentListBinding.inflate(inflater, container, false)
+                    return binding.root
+                    }
+
+                    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+                    super.onViewCreated(view, savedInstanceState)
+
+                    setupRecyclerView()
+
+                    viewModel.allEntries.observe(viewLifecycleOwner) { entries ->
+                    adapter.submitList(entries)
+                    updateProgress(entries)
+                    }
+
+                    viewModel.targetWeight.observe(viewLifecycleOwner) { target ->
+                    binding.tvTarget.text = "Цель: ${target} кг"
+                    }
+
+                    binding.fabAdd.setOnClickListener {
+                    findNavController().navigate(R.id.action_list_to_add)
+                    }
+
+                    binding.btnChart.setOnClickListener {
+                    findNavController().navigate(R.id.action_list_to_chart)
+                    }
+                    }
+
+                    private fun setupRecyclerView() {
+                    adapter = EntriesAdapter { entry ->
+                    val action = ListFragmentDirections.actionListToAdd(entry.id)
+                    findNavController().navigate(action)
+                    }
+                    binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
+                    binding.recyclerView.adapter = adapter
+                    }
+
+                    private fun updateProgress(entries: List<WeightEntry>) {
+                        if (entries.isEmpty()) {
+                        binding.tvProgress.text = "Нет записей"
+                        return
+                        }
+                        viewLifecycleOwner.lifecycleScope.launch {
+                        val progress = viewModel.calculateProgress()
+                        if (progress != null) {
+                        val daily = if (progress.dailyChange < 0) { "↓ ${String.format(" %.2f", -progress.dailyChange)}"
+                            } else if (progress.dailyChange> 0) {
+                            "↑ ${String.format("%.2f", progress.dailyChange)}"
+                            } else "0"
+                            binding.tvProgress.text = """
+                            Текущий: ${String.format("%.2f", progress.currentWeight)} кг
+                            Изменение за день: $daily кг
+                            Всего сброшено: ${String.format("%.2f", progress.totalLost)} кг
+                            Дней: ${progress.daysCount}
+                            """.trimIndent()
+                            }
+                            }
+                            }
+
+                            override fun onDestroyView() {
+                            super.onDestroyView()
+                            _binding = null
+                            }
+                            }
+
+                            --- app/src/main/java/com/example/weighttracker/ui/list/EntriesAdapter.kt ---
+                            package com.example.weighttracker.ui.list
+
+                            import android.graphics.Color
+                            import android.view.LayoutInflater
+                            import android.view.ViewGroup
+                            import androidx.recyclerview.widget.DiffUtil
+                            import androidx.recyclerview.widget.ListAdapter
+                            import androidx.recyclerview.widget.RecyclerView
+                            import com.example.weighttracker.data.WeightEntry
+                            import com.example.weighttracker.databinding.ItemEntryBinding
+
+                            class EntriesAdapter(
+                            private val onItemClick: (WeightEntry) -> Unit
+                            ) : ListAdapter<WeightEntry, EntriesAdapter.EntryViewHolder>(DiffCallback()) {
+
+                                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EntryViewHolder {
+                                val binding = ItemEntryBinding.inflate(
+                                LayoutInflater.from(parent.context), parent, false
+                                )
+                                return EntryViewHolder(binding, onItemClick)
+                                }
+
+                                override fun onBindViewHolder(holder: EntryViewHolder, position: Int) {
+                                val current = getItem(position)
+                                val previous = if (position < itemCount - 1) getItem(position + 1) else null
+                                    holder.bind(current, previous) } class EntryViewHolder( private val binding:
+                                    ItemEntryBinding, private val onItemClick: (WeightEntry) -> Unit
+                                    ) : RecyclerView.ViewHolder(binding.root) {
+
+                                    fun bind(entry: WeightEntry, previous: WeightEntry?) {
+                                    binding.tvDate.text = entry.date
+                                    binding.tvWeight.text = String.format("%.2f кг", entry.weight)
+                                    binding.tvFood.text = entry.food.ifEmpty { "—" }
+
+                                    val diff = if (previous != null) {
+                                    entry.weight - previous.weight
+                                    } else 0.0
+                                    val diffText = if (diff < 0) { "↓ ${String.format(" %.2f", -diff)}" } else if (diff>
+                                        0) {
+                                        "↑ ${String.format("%.2f", diff)}"
+                                        } else "0"
+                                        binding.tvDiff.text = diffText
+                                        binding.tvDiff.setTextColor(
+                                        if (diff < 0) Color.GREEN else if (diff> 0) Color.RED
+                                            else Color.GRAY
+                                            )
+
+                                            binding.root.setOnClickListener { onItemClick(entry) }
+                                            }
+                                            }
+
+                                            class DiffCallback : DiffUtil.ItemCallback<WeightEntry>() {
+                                                override fun areItemsTheSame(oldItem: WeightEntry, newItem: WeightEntry)
+                                                =
+                                                oldItem.id == newItem.id
+
+                                                override fun areContentsTheSame(oldItem: WeightEntry, newItem:
+                                                WeightEntry) =
+                                                oldItem == newItem
+                                                }
+                                                }
+
+                                                ---
+                                                app/src/main/java/com/example/weighttracker/ui/add/AddEditFragment.kt
+                                                ---
+                                                package com.example.weighttracker.ui.add
+
+                                                import android.os.Bundle
+                                                import android.view.LayoutInflater
+                                                import android.view.View
+                                                import android.view.ViewGroup
+                                                import android.widget.Toast
+                                                import androidx.fragment.app.Fragment
+                                                import androidx.fragment.app.viewModels
+                                                import androidx.lifecycle.lifecycleScope
+                                                import androidx.navigation.fragment.findNavController
+                                                import androidx.navigation.fragment.navArgs
+                                                import com.example.weighttracker.R
+                                                import com.example.weighttracker.data.WeightEntry
+                                                import com.example.weighttracker.databinding.FragmentAddEditBinding
+                                                import com.example.weighttracker.viewmodel.WeightViewModel
+                                                import kotlinx.coroutines.flow.first
+                                                import kotlinx.coroutines.launch
+                                                import java.text.SimpleDateFormat
+                                                import java.util.Calendar
+                                                import java.util.Locale
+
+                                                class AddEditFragment : Fragment() {
+
+                                                private var _binding: FragmentAddEditBinding? = null
+                                                private val binding get() = _binding!!
+
+                                                private val viewModel: WeightViewModel by viewModels()
+                                                private val args: AddEditFragmentArgs by navArgs()
+
+                                                private var editingEntry: WeightEntry? = null
+
+                                                override fun onCreateView(
+                                                inflater: LayoutInflater, container: ViewGroup?,
+                                                savedInstanceState: Bundle?
+                                                ): View {
+                                                _binding = FragmentAddEditBinding.inflate(inflater, container, false)
+                                                return binding.root
+                                                }
+
+                                                override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+                                                super.onViewCreated(view, savedInstanceState)
+
+                                                val entryId = args.entryId
+                                                if (entryId != -1L) {
+                                                lifecycleScope.launch {
+                                                val entries = viewModel.allEntries.first()
+                                                editingEntry = entries.find { it.id == entryId }
+                                                editingEntry?.let {
+                                                binding.etDate.setText(it.date)
+                                                binding.etWeight.setText(it.weight.toString())
+                                                binding.etFood.setText(it.food)
+                                                }
+                                                }
+                                                binding.btnDelete.visibility = View.VISIBLE
+                                                } else {
+                                                // сегодняшняя дата
+                                                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                                                binding.etDate.setText(sdf.format(Calendar.getInstance().time))
+                                                binding.btnDelete.visibility = View.GONE
+                                                }
+
+                                                binding.btnSave.setOnClickListener { saveEntry() }
+                                                binding.btnDelete.setOnClickListener { deleteEntry() }
+                                                }
+
+                                                private fun saveEntry() {
+                                                val date = binding.etDate.text.toString().trim()
+                                                val weightStr = binding.etWeight.text.toString().trim()
+                                                val food = binding.etFood.text.toString().trim()
+
+                                                if (date.isEmpty() || weightStr.isEmpty()) {
+                                                Toast.makeText(requireContext(), "Заполните дату и вес",
+                                                Toast.LENGTH_SHORT).show()
+                                                return
+                                                }
+
+                                                val weight = weightStr.toDoubleOrNull()
+                                                if (weight == null || weight <= 0) {
+                                                    Toast.makeText(requireContext(), "Введите корректный вес" ,
+                                                    Toast.LENGTH_SHORT).show() return } if (editingEntry !=null) { val
+                                                    updated=editingEntry!!.copy( date=date, weight=weight, food=food,
+                                                    timestamp=System.currentTimeMillis() ) viewModel.update(updated)
+                                                    Toast.makeText(requireContext(), "Обновлено" ,
+                                                    Toast.LENGTH_SHORT).show() } else { val newEntry=WeightEntry(
+                                                    date=date, weight=weight, food=food ) viewModel.insert(newEntry)
+                                                    Toast.makeText(requireContext(), "Добавлено" ,
+                                                    Toast.LENGTH_SHORT).show() } findNavController().navigateUp() }
+                                                    private fun deleteEntry() { editingEntry?.let { viewModel.delete(it)
+                                                    Toast.makeText(requireContext(), "Удалено" ,
+                                                    Toast.LENGTH_SHORT).show() findNavController().navigateUp() } }
+                                                    override fun onDestroyView() { super.onDestroyView() _binding=null }
+                                                    } ---
+                                                    app/src/main/java/com/example/weighttracker/ui/chart/ChartFragment.kt
+                                                    --- package com.example.weighttracker.ui.chart import
+                                                    android.graphics.Color import android.os.Bundle import
+                                                    android.view.LayoutInflater import android.view.View import
+                                                    android.view.ViewGroup import androidx.fragment.app.Fragment import
+                                                    androidx.fragment.app.viewModels import
+                                                    com.example.weighttracker.databinding.FragmentChartBinding import
+                                                    com.example.weighttracker.viewmodel.WeightViewModel import
+                                                    com.github.mikephil.charting.components.XAxis import
+                                                    com.github.mikephil.charting.data.Entry import
+                                                    com.github.mikephil.charting.data.LineData import
+                                                    com.github.mikephil.charting.data.LineDataSet import
+                                                    com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+                                                    import com.github.mikephil.charting.formatter.ValueFormatter class
+                                                    ChartFragment : Fragment() { private var _binding:
+                                                    FragmentChartBinding?=null private val binding get()=_binding!!
+                                                    private val viewModel: WeightViewModel by viewModels() override fun
+                                                    onCreateView( inflater: LayoutInflater, container: ViewGroup?,
+                                                    savedInstanceState: Bundle? ): View {
+                                                    _binding=FragmentChartBinding.inflate(inflater, container, false)
+                                                    return binding.root } override fun onViewCreated(view: View,
+                                                    savedInstanceState: Bundle?) { super.onViewCreated(view,
+                                                    savedInstanceState) setupChart()
+                                                    viewModel.allEntriesAsc.observe(viewLifecycleOwner) { entries ->
+                                                    val target = viewModel.targetWeight.value ?: 67.0
+                                                    updateChart(entries, target)
+                                                    }
+                                                    }
+
+                                                    private fun setupChart() {
+                                                    with(binding.chart) {
+                                                    description.isEnabled = false
+                                                    setTouchEnabled(true)
+                                                    isDragEnabled = true
+                                                    setScaleEnabled(true)
+                                                    setPinchZoom(true)
+
+                                                    xAxis.position = XAxis.XAxisPosition.BOTTOM
+                                                    xAxis.granularity = 1f
+                                                    xAxis.setDrawGridLines(false)
+
+                                                    axisLeft.setDrawGridLines(true)
+                                                    axisRight.isEnabled = false
+
+                                                    legend.isEnabled = true
+                                                    }
+                                                    }
+
+                                                    private fun updateChart(entries: List<WeightEntry>, target: Double)
+                                                        {
+                                                        if (entries.isEmpty()) {
+                                                        binding.chart.clear()
+                                                        binding.chart.invalidate()
+                                                        return
+                                                        }
+
+                                                        val sorted = entries.sortedBy { it.date }
+
+                                                        val weightEntries = sorted.mapIndexed { index, entry ->
+                                                        Entry(index.toFloat(), entry.weight.toFloat())
+                                                        }
+                                                        val weightDataSet = LineDataSet(weightEntries, "Вес")
+                                                        weightDataSet.color = Color.BLUE
+                                                        weightDataSet.setCircleColor(Color.BLUE)
+                                                        weightDataSet.lineWidth = 2f
+                                                        weightDataSet.valueTextSize = 10f
+                                                        weightDataSet.valueFormatter = object : ValueFormatter() {
+                                                        override fun getFormattedValue(value: Float): String {
+                                                        return String.format("%.2f", value)
+                                                        }
+                                                        }
+
+                                                        val targetEntries = sorted.mapIndexed { index, _ ->
+                                                        Entry(index.toFloat(), target.toFloat())
+                                                        }
+                                                        val targetDataSet = LineDataSet(targetEntries, "Цель")
+                                                        targetDataSet.color = Color.RED
+                                                        targetDataSet.setDrawCircles(false)
+                                                        targetDataSet.lineWidth = 1.5f
+                                                        targetDataSet.enableDashedLine(10f, 5f, 0f)
+                                                        targetDataSet.setDrawValues(false)
+
+                                                        val lineData = LineData(weightDataSet, targetDataSet)
+                                                        binding.chart.data = lineData
+
+                                                        val dateLabels = sorted.map { it.date }
+                                                        binding.chart.xAxis.valueFormatter =
+                                                        IndexAxisValueFormatter(dateLabels)
+                                                        binding.chart.xAxis.labelRotationAngle = -45f
+
+                                                        binding.chart.invalidate()
+                                                        }
+
+                                                        override fun onDestroyView() {
+                                                        super.onDestroyView()
+                                                        _binding = null
+                                                        }
+                                                        }
